@@ -72,6 +72,9 @@ Download, install, and start the [prom_multi_proc](https://github.com/atongen/pr
 aggregator application using the metrics json definition file created earlier.
 Make note of the socket location.
 
+Note that in development, the ruby client will funtion normally if there is no aggregator process listening
+on the socket.
+
 ### Collect metrics in ruby app
 
 Create a `PromMultiProc::Base` object for collecting metrics
