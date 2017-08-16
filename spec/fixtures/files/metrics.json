@@ -9,6 +9,11 @@
         ]
     },
     {
+        "type": "counter",
+        "name": "app_test_counter_2_total",
+        "help": "A test counter"
+    },
+    {
         "type": "gauge",
         "name": "app_test_gauge_total",
         "help": "A test gauge",

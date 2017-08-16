@@ -44,8 +44,13 @@ module PromMultiProc
             value = 1.0
             labels = {}
           when 1
-            value = 1.0
-            labels = args[0]
+            if args[0].is_a?(Hash)
+              value = 1.0
+              labels = args[0]
+            else
+              value = args[0]
+              labels = {}
+            end
           when 2
             value = args[0]
             labels = args[1]

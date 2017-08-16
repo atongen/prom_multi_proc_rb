@@ -33,11 +33,21 @@ RSpec.describe PromMultiProc::Base do
       end
     end
 
+    context "#metrics" do
+      it "should return an array of metric names" do
+        expect(subject.metrics).to eq(%i(
+          test_counter_total test_counter_2_total test_gauge_total
+          test_histogram_seconds test_summary_seconds))
+      end
+    end
+
     context "#multi" do
       it "should collect multiple metrics" do
         metrics = [
           build_metric_object("test_counter_total", ["val1", "val2"], "inc", 1.0),
           build_metric_object("test_counter_total", ["val1", "val2"], "add", 2.0),
+          build_metric_object("test_counter_2_total", [], "inc", 1.0),
+          build_metric_object("test_counter_2_total", [], "add", 2.0),
           build_metric_object("test_gauge_total", ["val2", "val3"], "set", 2.0),
           build_metric_object("test_gauge_total", ["val2", "val3"], "inc", 1.0),
           build_metric_object("test_gauge_total", ["val2", "val3"], "dec", 1.0),
@@ -51,6 +61,8 @@ RSpec.describe PromMultiProc::Base do
         subject.multi do |m|
           m.test_counter_total.inc(label1: "val1", label2: "val2")
           m.test_counter_total.add(2, label1: "val1", label2: "val2")
+          m.test_counter_2_total.inc
+          m.test_counter_2_total.add(2)
           m.test_gauge_total.set(2, label2: "val2", label3: "val3")
           m.test_gauge_total.inc(label2: "val2", label3: "val3")
           m.test_gauge_total.dec(label2: "val2", label3: "val3")
@@ -74,6 +86,20 @@ RSpec.describe PromMultiProc::Base do
         metric = build_metric("test_counter_total", ["val1", "val2"], "add", 2.0)
         expect(subject.writer).to receive(:write_socket).once.with(metric).and_return(true)
         subject.test_counter_total.add(2, label1: "val1", label2: "val2")
+      end
+    end
+
+    context "#test_counter_2_total" do
+      it "should inc" do
+        metric = build_metric("test_counter_2_total", [], "inc", 1.0)
+        expect(subject.writer).to receive(:write_socket).once.with(metric).and_return(true)
+        subject.test_counter_2_total.inc
+      end
+
+      it "should add" do
+        metric = build_metric("test_counter_2_total", [], "add", 2.0)
+        expect(subject.writer).to receive(:write_socket).once.with(metric).and_return(true)
+        subject.test_counter_2_total.add(2)
       end
     end
 
