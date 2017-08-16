@@ -1,6 +1,7 @@
 # prom_multi_proc_rb
 
 [![Build Status](https://travis-ci.org/atongen/prom_multi_proc_rb.svg?branch=master)](https://travis-ci.org/atongen/prom_multi_proc_rb)
+[![Gem Version](https://badge.fury.io/rb/prom_multi_proc_rb.svg)](https://badge.fury.io/rb/prom_multi_proc_rb)
 
 Ruby client library for collecting prometheus metrics.
 Designed for use in applications running under forking servers (unicorn, puma).
