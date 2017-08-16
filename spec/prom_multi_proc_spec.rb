@@ -5,7 +5,7 @@ RSpec.describe PromMultiProc do
     expect(PromMultiProc::VERSION).not_to be nil
   end
 
-  it "does something useful" do
-    expect(false).to eq(true)
+  it "has types" do
+    expect(PromMultiProc::TYPES).to have(4).items
   end
 end
