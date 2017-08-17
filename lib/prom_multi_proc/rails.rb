@@ -1,3 +1,5 @@
+require "logger"
+
 module PromMultiProc
   module Rails
     def self.init(prefix = nil)
@@ -24,7 +26,13 @@ module PromMultiProc
         validate = false
       end
 
-      ::Rails.logger.error("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, validate: #{validate}")
+      if ::Rails.logger
+        logger = ::Rails.logger
+      else
+        logger = ::Logger.new(STDOUT)
+      end
+
+      logger.error("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, validate: #{validate}")
 
       Base.new(
         prefix: prefix,
@@ -32,7 +40,7 @@ module PromMultiProc
         metrics: metrics,
         batch_size: batch_size,
         validate: validate,
-        logger: ::Rails.logger
+        logger: logger
       )
     end
   end
