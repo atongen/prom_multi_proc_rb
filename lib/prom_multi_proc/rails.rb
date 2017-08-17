@@ -12,7 +12,7 @@ module PromMultiProc
 
       if ENV.key?("PROM_MULTI_PROC_BATCH_SIZE")
         batch_size = ENV["PROM_MULTI_PROC_BATCH_SIZE"].to_i
-      elsif %w(rails rake).include?(name) || ::Rails.env.development? || ::Rails.env.test?
+      elsif %w(rails rake).include?(program_name) || ::Rails.env.development? || ::Rails.env.test?
         batch_size = 1
       elsif ::Rails.env.production?
         batch_size = 100
