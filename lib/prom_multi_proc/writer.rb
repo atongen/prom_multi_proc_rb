@@ -3,7 +3,7 @@ module PromMultiProc
     attr_reader :socket, :batch_size
 
     def initialize(socket:, batch_size: 1, validate: false)
-      if !batch_size.is_a?(Fixnum) || batch_size <= 0
+      if !batch_size.is_a?(Integer) || batch_size <= 0
         raise PromMultiProcError.new("Invalid batch size: #{batch_size}")
       end
       @batch_size = batch_size
