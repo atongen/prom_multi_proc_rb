@@ -5,7 +5,7 @@ module PromMultiProc
   class Base
     attr_reader :logger, :prefix, :writer
 
-    def initialize(socket:, metrics:, batch_size: 1, logger: nil, validate: false, prefix: "")
+    def initialize(socket:, metrics:, batch_size: 1, batch_timeout: 3, logger: nil, validate: false, prefix: "")
       @prefix = prefix
       @logger = logger || ::Logger.new(STDOUT)
 
@@ -14,7 +14,7 @@ module PromMultiProc
       end
 
       @metric_objects = Concurrent::Map.new
-      @writer = Writer.new(socket: socket, batch_size: batch_size, validate: validate)
+      @writer = Writer.new(socket: socket, batch_size: batch_size, batch_timeout: batch_timeout, validate: validate)
       @multi_lock = Mutex.new
 
       specs = get_specs(metrics)
