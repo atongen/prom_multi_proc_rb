@@ -20,6 +20,12 @@ module PromMultiProc
         batch_size = 5
       end
 
+      if ENV.key?("PROM_MULTI_PROC_BATCH_TIMEOUT")
+        batch_timeout = ENV["PROM_MULTI_PROC_BATCH_TIMEOUT"].to_i
+      else
+        batch_timeout = 3
+      end
+
       if ::Rails.env.development? || ::Rails.env.test?
         validate = true
       else
@@ -32,13 +38,14 @@ module PromMultiProc
         logger = ::Logger.new(STDOUT)
       end
 
-      logger.error("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, validate: #{validate}")
+      logger.error("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, batch timeout: #{batch_timeout} validate: #{validate}")
 
       Base.new(
         prefix: prefix,
         socket: socket,
         metrics: metrics,
         batch_size: batch_size,
+        batch_timeout: batch_timeout,
         validate: validate,
         logger: logger
       )
