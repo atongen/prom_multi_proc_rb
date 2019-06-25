@@ -1,4 +1,5 @@
 require "spec_helper"
+require "tempfile"
 
 RSpec.describe PromMultiProc::Base do
   subject do
@@ -13,6 +14,46 @@ RSpec.describe PromMultiProc::Base do
   end
 
   context "metrics" do
+    context "#initialize" do
+      let(:metrics_file) { Tempfile.new('metrics.json') }
+
+      after(:each) do
+        metrics_file.close
+        metrics_file.unlink
+      end
+
+      def with_metrics(m)
+        metrics_file << m
+        metrics_file.flush
+        PromMultiProc::Base.new(
+          prefix: "app_",
+          socket: File.expand_path("../../tmp/sockets/metrics.sock", __FILE__),
+          metrics: metrics_file.path,
+          logger: Logger.new(File::NULL),
+          batch_size: 1,
+          validate: true
+        )
+      end
+
+      it "should raise an error if a metric is missing help" do
+        metrics = <<-EOF
+        [ { "type": "counter", "name": "app_something" } ]
+        EOF
+        expect {
+          with_metrics(metrics)
+        }.to raise_error(PromMultiProc::PromMultiProcError, /missing help/)
+      end
+
+      it "should raise an error if a metric's help is empty" do
+        metrics = <<-EOF
+        [ { "type": "counter", "name": "app_something", "help": "   " } ]
+        EOF
+        expect {
+          with_metrics(metrics)
+        }.to raise_error(PromMultiProc::PromMultiProcError, /missing help/)
+      end
+    end
+
     context "#metric?" do
       it "should indicate metric existance" do
         expect(subject.metric?(:test_counter_total)).to be true

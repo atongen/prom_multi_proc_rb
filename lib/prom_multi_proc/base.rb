@@ -80,6 +80,10 @@ module PromMultiProc
       end
       name = spec["name"].sub(/\A#{prefix}/, "").to_sym
 
+      unless spec["help"] && !spec["help"].strip.empty?
+        raise PromMultiProcError.new("Metric '#{spec['name']}' is missing help")
+      end
+
       labels = (spec["labels"] || []).map(&:to_sym)
       unless labels.all? { |l| valid_metric?(l)  }
         raise PromMultiProcError.new("Invalid label: #{spec.inspect}")
