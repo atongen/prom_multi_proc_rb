@@ -38,7 +38,7 @@ module PromMultiProc
         logger = ::Logger.new(STDOUT)
       end
 
-      logger.error("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, batch timeout: #{batch_timeout} validate: #{validate}")
+      logger.info("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, batch timeout: #{batch_timeout} validate: #{validate}")
 
       Base.new(
         prefix: prefix,
