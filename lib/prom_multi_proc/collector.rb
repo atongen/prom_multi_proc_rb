@@ -21,7 +21,7 @@ module PromMultiProc
         raise PromMultiProcError.new("Invalid label cardinality (#{name}): #{labels.keys.inspect}, need keys: #{@label_keys.inspect}")
       end
       unless valid_label_values?(labels)
-        raise PromMultiProcError.new("Invalid label values (#{name}): #{labels.values.inspect}")
+        raise PromMultiProcError.new("Invalid label values (#{name}): #{labels.values.inspect} (all values must be string or symbol)")
       end
       unless valid_value?(value)
         raise PromMultiProcError.new("Invalid value (#{name}): #{value.inspect} (must be numeric)")
