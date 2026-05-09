@@ -1,54 +1,38 @@
+# frozen_string_literal: true
+
 require "logger"
 
 module PromMultiProc
   module Rails
-    def self.init(prefix = nil)
-      metrics = ENV.fetch("PROM_MULTI_PROC_DEFINITION_FILE", ::Rails.root.join("config/metrics.json").to_s)
-      socket = ENV.fetch("PROM_MULTI_PROC_SOCKET", ::Rails.root.join("tmp/sockets/metrics.sock").to_s)
-
+    def self.init(**options)
       program_name = File.basename($PROGRAM_NAME)
       app_name = ::Rails.application.class.name.underscore.split("/").first
-      prefix ||= "#{app_name}_"
 
-      if ENV.key?("PROM_MULTI_PROC_BATCH_SIZE")
-        batch_size = ENV["PROM_MULTI_PROC_BATCH_SIZE"].to_i
-      elsif %w(rails rake).include?(program_name) || ::Rails.env.development? || ::Rails.env.test?
-        batch_size = 1
-      elsif ::Rails.env.production?
-        batch_size = 100
-      else
-        batch_size = 5
-      end
+      defaults = {
+        prefix:        "#{app_name}_",
+        socket:        ENV.fetch("PROM_MULTI_PROC_SOCKET", ::Rails.root.join("tmp/sockets/metrics.sock").to_s),
+        metrics:       ENV.fetch("PROM_MULTI_PROC_DEFINITION_FILE", ::Rails.root.join("config/metrics.json").to_s),
+        batch_size:    default_batch_size(program_name),
+        batch_timeout: 3,
+        validate:      ::Rails.env.development? || ::Rails.env.test?,
+        logger:        ::Rails.logger || ::Logger.new(STDOUT)
+      }
 
-      if ENV.key?("PROM_MULTI_PROC_BATCH_TIMEOUT")
-        batch_timeout = ENV["PROM_MULTI_PROC_BATCH_TIMEOUT"].to_i
-      else
-        batch_timeout = 3
-      end
+      config = defaults.merge(options)
+      config[:logger].info("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch_size: #{config[:batch_size]}, batch_timeout: #{config[:batch_timeout]}, validate: #{config[:validate]}")
 
-      if ::Rails.env.development? || ::Rails.env.test?
-        validate = true
-      else
-        validate = false
-      end
-
-      if ::Rails.logger
-        logger = ::Rails.logger
-      else
-        logger = ::Logger.new(STDOUT)
-      end
-
-      logger.info("Setting up prom_multi_proc for #{app_name}-#{program_name}, batch size: #{batch_size}, batch timeout: #{batch_timeout} validate: #{validate}")
-
-      Base.new(
-        prefix: prefix,
-        socket: socket,
-        metrics: metrics,
-        batch_size: batch_size,
-        batch_timeout: batch_timeout,
-        validate: validate,
-        logger: logger
-      )
+      Base.new(**config)
     end
+
+    def self.default_batch_size(program_name)
+      if %w(rails rake).include?(program_name) || ::Rails.env.development? || ::Rails.env.test?
+        1
+      elsif ::Rails.env.production?
+        100
+      else
+        5
+      end
+    end
+    private_class_method :default_batch_size
   end
 end

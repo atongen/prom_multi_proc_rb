@@ -52,6 +52,59 @@ RSpec.describe PromMultiProc::Base do
           with_metrics(metrics)
         }.to raise_error(PromMultiProc::PromMultiProcError, /missing help/)
       end
+
+      it "should apply the prefix if a metric name does not already start with it" do
+        b = with_metrics('[ { "type": "counter", "name": "something_total", "help": "A test counter" } ]')
+        expect(b.metric?(:something_total)).to be true
+        expect(b.metric(:something_total).name).to eq("app_something_total")
+      end
+
+      it "should append _ to prefix if not already present" do
+        metrics_file.write('[{"type":"counter","name":"app_something_total","help":"A counter"}]')
+        metrics_file.flush
+        b = PromMultiProc::Base.new(
+          prefix: "app",
+          socket: File.expand_path("../../tmp/sockets/metrics.sock", __FILE__),
+          metrics: metrics_file.path,
+          logger: Logger.new(File::NULL),
+          batch_size: 1
+        )
+        expect(b.prefix).to eq("app_")
+        expect(b.metric?(:something_total)).to be true
+      end
+
+      it "should raise an error for an unknown metric type" do
+        metrics = <<-EOF
+        [ { "type": "bogus", "name": "app_something", "help": "A test" } ]
+        EOF
+        expect {
+          with_metrics(metrics)
+        }.to raise_error(PromMultiProc::PromMultiProcError, /Unknown type/)
+      end
+
+      it "should raise an error if a metric name conflicts with an existing method" do
+        metrics = <<-EOF
+        [ { "type": "counter", "name": "app_freeze", "help": "A test counter" } ]
+        EOF
+        expect {
+          with_metrics(metrics)
+        }.to raise_error(PromMultiProc::PromMultiProcError, /conflicts with existing method/)
+      end
+
+      it "should raise an error for invalid json in the metrics file" do
+        metrics_file.write("{ not valid json ]")
+        metrics_file.flush
+        expect {
+          PromMultiProc::Base.new(
+            prefix: "app_",
+            socket: File.expand_path("../../tmp/sockets/metrics.sock", __FILE__),
+            metrics: metrics_file.path,
+            logger: Logger.new(File::NULL),
+            batch_size: 1,
+            validate: true
+          )
+        }.to raise_error(PromMultiProc::PromMultiProcError, /not valid json/)
+      end
     end
 
     context "#metric?" do

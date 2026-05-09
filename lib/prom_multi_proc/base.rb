@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "logger"
 require "concurrent"
 
@@ -5,8 +7,12 @@ module PromMultiProc
   class Base
     attr_reader :logger, :prefix, :writer
 
-    def initialize(socket:, metrics:, batch_size: 1, batch_timeout: 3, logger: nil, validate: false, prefix: "")
-      @prefix = prefix
+    def initialize(socket:, metrics:, batch_size: nil, batch_timeout: nil, logger: nil, validate: false, prefix: "")
+      @prefix = if prefix.empty? || prefix.end_with?("_")
+        prefix
+      else
+        "#{prefix}_"
+      end
       @logger = logger || ::Logger.new(STDOUT)
 
       unless File.socket?(socket)
@@ -36,9 +42,9 @@ module PromMultiProc
     def multi
       return unless block_given?
       result = @multi_lock.synchronize do
-        Proxy.new(self).tap do |proxy|
-          yield(proxy)
-        end
+        proxy = Proxy.new(self)
+        yield(proxy)
+        proxy
       end
       @writer.write_multi(result.multis)
     end
@@ -46,7 +52,7 @@ module PromMultiProc
   private
 
     def valid_metric?(name)
-      !!METRIC_RE.match(name)
+      METRIC_RE.match?(name)
     end
 
     def get_specs(file)
@@ -68,36 +74,38 @@ module PromMultiProc
     def process_spec!(spec)
       klazz = TYPES[spec["type"].to_sym]
       unless klazz
-        raise PromMultiProcError.new("Unkown type: #{spec.inspect}")
+        raise PromMultiProcError.new("Unknown type: #{spec.inspect}")
       end
 
       unless valid_metric?(spec["name"])
         raise PromMultiProcError.new("Invalid name: #{spec.inspect}")
       end
 
-      unless spec["name"].start_with?(prefix)
-        raise PromMultiProcError.new("Metric '#{spec['name']}' must start with prefix '#{prefix}'")
+      full_name = if prefix.empty? || spec["name"].start_with?(prefix)
+        spec["name"]
+      else
+        "#{prefix}#{spec["name"]}"
       end
-      name = spec["name"].sub(/\A#{prefix}/, "").to_sym
+      name = full_name.sub(/\A#{Regexp.escape(prefix)}/, "").to_sym
 
       unless spec["help"] && !spec["help"].strip.empty?
         raise PromMultiProcError.new("Metric '#{spec['name']}' is missing help")
       end
 
       labels = (spec["labels"] || []).map(&:to_sym)
-      unless labels.all? { |l| valid_metric?(l)  }
+      unless labels.all? { |l| valid_metric?(l) }
         raise PromMultiProcError.new("Invalid label: #{spec.inspect}")
-      end
-
-      if self.class.instance_methods(false).include?(name) || methods(false).include?(name)
-        raise PromMultiProcError.new("Metric method exists: #{name}")
       end
 
       if @metric_objects.key?(name)
         raise PromMultiProcError.new("Metric already exists: #{name}")
       end
 
-      @metric_objects[name] = klazz.new(spec["name"], labels, @writer)
+      if respond_to?(name)
+        raise PromMultiProcError.new("Metric method conflicts with existing method: #{name}")
+      end
+
+      @metric_objects[name] = klazz.new(full_name, labels, @writer)
 
       define_singleton_method(name) do
         @metric_objects[name]

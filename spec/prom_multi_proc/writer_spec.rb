@@ -43,4 +43,17 @@ RSpec.describe PromMultiProc::Writer do
   it "should not have a socket" do
     expect(subject.socket?).to be false
   end
+
+  it "should be able to shut down the background thread" do
+    expect(subject.instance_variable_get(:@thread)).to be_alive
+    subject.shutdown
+    sleep(0.05)
+    expect(subject.instance_variable_get(:@thread)).not_to be_alive
+  end
+
+  it "should be idempotent to shut down twice" do
+    subject.shutdown
+    expect { subject.shutdown }.not_to raise_error
+  end
+
 end

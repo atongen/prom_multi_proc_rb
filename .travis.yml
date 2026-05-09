@@ -1,5 +1,0 @@
-sudo: false
-language: ruby
-rvm:
-  - 2.6.5
-  - 2.7.2
