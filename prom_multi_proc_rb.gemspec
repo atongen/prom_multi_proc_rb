@@ -1,4 +1,5 @@
-# coding: utf-8
+# frozen_string_literal: true
+
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require "prom_multi_proc/version"
@@ -9,18 +10,17 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Andrew Tongen"]
   spec.email         = ["atongen@gmail.com"]
 
-  spec.summary       = %q{A ruby library for collecting prometheus metrics within forking servers}
-  spec.description   = %q{A ruby library for collecting prometheus metrics within forking servers}
+  spec.summary       = "A ruby library for collecting prometheus metrics within forking servers"
+  spec.description   = "A ruby library for collecting prometheus metrics within forking servers"
   spec.homepage      = "https://github.com/atongen/prom_multi_proc_rb"
   spec.license       = "MIT"
 
-  # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
-  # to allow pushing to a single host or delete this section to allow pushing to any host.
+  spec.required_ruby_version = ">= 2.7"
+
   if spec.respond_to?(:metadata)
     spec.metadata["allowed_push_host"] = "https://rubygems.org"
   else
-    raise "RubyGems 2.0 or newer is required to protect against " \
-      "public gem pushes."
+    raise "RubyGems 2.0 or newer is required to protect against public gem pushes."
   end
 
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|
@@ -30,10 +30,11 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_development_dependency "bundler", ">= 1.15"
-  spec.add_development_dependency "rake", ">= 12.3.3"
-  spec.add_development_dependency "rspec", "~> 3.9"
+  spec.add_development_dependency "bundler", ">= 2.0"
+  spec.add_development_dependency "rake", ">= 13.0"
+  spec.add_development_dependency "rspec", "~> 3.13"
   spec.add_development_dependency "rspec-collection_matchers", "~> 1.2"
 
   spec.add_dependency "concurrent-ruby", "~> 1.1"
+  spec.add_dependency "logger", ">= 1.5"
 end

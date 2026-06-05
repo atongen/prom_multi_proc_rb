@@ -1,16 +1,23 @@
+# frozen_string_literal: true
+
 module PromMultiProc
   class Collector
-    attr_reader :name, :metric_methods
+    attr_reader :name
+
+    EXCLUDED_FROM_METRIC_METHODS = %i(validate! to_msg).freeze
+
+    def self.metric_methods
+      @metric_methods ||= (public_instance_methods(false) - EXCLUDED_FROM_METRIC_METHODS).map(&:to_s).freeze
+    end
 
     def initialize(name, label_keys, writer)
       @name = name
       @label_keys = label_keys
       @writer = writer
-      @metric_methods = (public_methods(false) - %i(
-        validate!
-        valid_method? valid_label_keys? valid_label_values? valid_value?
-        to_msg
-      )).map(&:to_s)
+    end
+
+    def metric_methods
+      self.class.metric_methods
     end
 
     def validate!(method, value, labels)
@@ -28,6 +35,15 @@ module PromMultiProc
       end
     end
 
+    def to_msg(method, value, labels)
+      { "name" => name,
+        "method" => method,
+        "value" => value.to_f,
+        "label_values" => labels.values }
+    end
+
+  private
+
     def valid_method?(method)
       metric_methods.include?(method)
     end
@@ -43,15 +59,6 @@ module PromMultiProc
     def valid_value?(value)
       value.is_a?(Numeric)
     end
-
-    def to_msg(method, value, labels)
-      { "name" => name,
-        "method" => method,
-        "value" => value.to_f,
-        "label_values" => labels.values }
-    end
-
-  private
 
     def write(method, value, labels)
       @writer.write(self, method, value, labels)

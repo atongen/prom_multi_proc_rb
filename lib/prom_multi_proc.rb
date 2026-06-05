@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 require "socket"
 require "json"
-require "thread"
 
 require "prom_multi_proc/version"
 
@@ -22,9 +23,9 @@ module PromMultiProc
     gauge:     Gauge,
     histogram: Histogram,
     summary:   Summary
-  }
+  }.freeze
 
-  METRIC_RE = /\A[a-z]+[0-9a-z_]+\Z/
+  METRIC_RE = /\A[a-z]+[0-9a-z_]+\Z/.freeze
 end
 
 require "prom_multi_proc/rails" if defined?(::Rails)
