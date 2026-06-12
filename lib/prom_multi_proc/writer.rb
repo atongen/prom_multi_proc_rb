@@ -66,7 +66,18 @@ module PromMultiProc
       @lock.synchronize do
         if (force && @messages.length > 0) || (@messages.length >= batch_size)
           begin
-            write_socket(JSON.generate(@messages))
+            if socket?
+              @warned_no_socket = false
+              write_socket(JSON.generate(@messages))
+            else
+              # Normal state when the daemon isn't running (CI, dev, one-off
+              # rake tasks) — warn once instead of once per batch
+              unless @warned_no_socket
+                warn("prom_multi_proc_rb - flush: socket #{@socket} not available, dropping metrics")
+                @warned_no_socket = true
+              end
+              false
+            end
           rescue StandardError => e
             # Never raise into host app; drop the batch
             warn("prom_multi_proc_rb - flush: Failed to write batch to socket #{e}")

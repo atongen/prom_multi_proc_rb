@@ -13,6 +13,10 @@ RSpec.describe PromMultiProc::Base do
     )
   end
 
+  before do
+    allow(subject.writer).to receive(:socket?).and_return(true)
+  end
+
   context "metrics" do
     context "#initialize" do
       let(:metrics_file) { Tempfile.new('metrics.json') }
