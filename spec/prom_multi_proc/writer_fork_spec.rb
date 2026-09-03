@@ -178,7 +178,7 @@ RSpec.describe PromMultiProc::Writer, "flush thread lifecycle" do
     # A real fork leaves the inherited thread dead. Kill it here so it can't
     # win the restart race itself (which would make the count ambiguous) and
     # can't outlive the example, looping against torn down stubs.
-    subject.instance_variable_get(:@thread).kill
+    subject.instance_variable_get(:@thread).kill.join
     subject.instance_variable_set(:@thread_pid, -1) # simulate "some other process"
 
     10.times.map { Thread.new { counter.inc(label1: "val1") } }.each(&:join)
@@ -190,11 +190,14 @@ RSpec.describe PromMultiProc::Writer, "flush thread lifecycle" do
     allow(subject).to receive(:socket?).and_return(true)
     allow(subject).to receive(:write_socket).and_return(true)
 
+    # Kill the inherited thread first, as fork would have. Left alive, its timer
+    # flush can drain the buffer before the precondition below is checked.
+    inherited_thread = subject.instance_variable_get(:@thread)
+    inherited_thread.kill.join
+
     counter.inc(label1: "inherited") # one message, batch_size is 3, so it stays
     expect(subject.instance_variable_get(:@messages)).not_to be_empty
 
-    inherited_thread = subject.instance_variable_get(:@thread)
-    inherited_thread.kill
     subject.instance_variable_set(:@thread_pid, -1) # simulate "some other process"
 
     subject.send(:ensure_flush_thread)
