@@ -21,12 +21,9 @@ module PromMultiProc
 
       @messages = []
       @lock = Mutex.new
-      @thread = Thread.new do
-        loop do
-          flush(force: true)
-          sleep(@batch_timeout)
-        end
-      end
+      @shutdown = false
+
+      start_flush_thread
     end
 
     def validate?
@@ -34,10 +31,17 @@ module PromMultiProc
     end
 
     def shutdown
-      if @thread&.alive?
-        flush
-        @thread.kill
+      # Read @thread under the lock that start_flush_thread writes it, so a post
+      # fork restart racing SIGTERM can't leave us killing a stale dead thread.
+      thread = @lock.synchronize do
+        @shutdown = true
+        @thread
       end
+
+      return unless thread&.alive?
+
+      flush(force: true) # outside the lock; flush takes it
+      thread.kill
     end
 
     def write(metric, method, value, labels)
@@ -47,6 +51,10 @@ module PromMultiProc
     # array of arrays where inner array is length 4 matching arguments
     # for signature of #write
     def write_multi(metrics)
+      # Before anything is buffered, so that a post fork restart discards only
+      # the messages this process inherited, never the ones it just wrote.
+      ensure_flush_thread
+
       if validate?
         metrics.each do |m, method, value, labels|
           m.validate!(method, value, labels)
@@ -63,6 +71,8 @@ module PromMultiProc
     end
 
     def flush(force: false)
+      ensure_flush_thread
+
       @lock.synchronize do
         if (force && @messages.length > 0) || (@messages.length >= batch_size)
           begin
@@ -98,6 +108,35 @@ module PromMultiProc
     end
 
   private
+
+    # Threads do not survive fork, so in a pre-forking server (unicorn with
+    # preload_app, puma cluster mode, resque...) every worker inherits a dead
+    # flush thread. Notice the pid change on the first write/flush in the child
+    # and start a new one there. The inherited buffer is dropped: the parent
+    # still owns those messages and sends them itself.
+    def ensure_flush_thread
+      return if @thread_pid == Process.pid
+
+      @lock.synchronize do
+        return if @thread_pid == Process.pid # another thread won the race
+        return if @shutdown
+
+        @messages.clear
+        start_flush_thread
+      end
+    end
+
+    # @thread_pid is assigned before Thread.new so the new thread's first flush
+    # takes the fast path above instead of spawning a second thread.
+    def start_flush_thread
+      @thread_pid = Process.pid
+      @thread = Thread.new do
+        loop do
+          flush(force: true)
+          sleep(@batch_timeout)
+        end
+      end
+    end
 
     def write_socket(msg)
       s = UNIXSocket.new(@socket)
